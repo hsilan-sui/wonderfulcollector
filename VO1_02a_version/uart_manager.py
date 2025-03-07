@@ -53,20 +53,37 @@ class UartManager:
             #Ask_Machine_setting
         }
 
-        #啟動遊戲
+        #啟動遊戲(一次/電子支付  index[6]=> 0x01)
         if command == self.KindFEILOLIcmd.Send_Starting_once_game:
-            packet = bytearray([0xBB, 0x73, 0x01, 0x02, 0x01, 0x00, 0x00, 0x00,
+            packet = bytearray([0xBB, 0x73, 0x01, 0x02, 0x01, 0x01, 0x00, 0x00,
                                 0x00, 0x00, 0x00, 0x00, 0x00, self.packet_id, 0x00, 0xAA])
-            if parameters:
-                for key, value in parameters.items():
-                    if key in ['epays', 'freeplays']:
-                        index = 5 if key == 'epays' else 6
-                        packet[index] = value
             for i in range(2, 14):
                 packet[15] ^= packet[i]
             self.uart_FEILOLI.write(packet)
             print(f"Sent packet to 娃娃機: {self._format_packet(packet)}")
             return
+        
+        #啟動遊戲(可能多次/mqtt驅動 帶參數)
+        elif command == self.KindFEILOLIcmd.Send_Starting_games:
+            packet = bytearray([0xBB, 0x73, 0x01, 0x02, 0x01, 0x00, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x00, 0x00, self.packet_id, 0x00, 0xAA])
+        
+            if parameters:
+                for key, value in parameters.items():
+                    if key in ['epays', 'freeplays']:
+                        index = 5 if key == 'epays' else 6
+                        packet[index] = value
+            else: 
+                print(f"mqtt驅動啟動遊戲，參數不明")
+                return 
+            
+            for i in range(2, 14):
+                packet[15] ^= packet[i]
+            self.uart_FEILOLI.write(packet)
+            print(f"Sent packet to 娃娃機: {self._format_packet(packet)}")
+            return
+        
+        # 遠端清除
         elif command == self.KindFEILOLIcmd.Send_Clean_transaction_account:
             # 初始化封包:以下是查詢:遠端帳目封包 只要是清除 該封包的位置就會是0x01 
             packet = bytearray([
